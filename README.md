@@ -1,3 +1,7 @@
+# Zenix ORM #
+
+해당 프로젝트는 Java의 Hibernate를 모방하여 만들어진 Node.js의 C++ Addon 기능을 활용한 고성능 ORM 입니다.
+
 ORM Feature Roadmap: 초기 단계부터 프로덕트 단계까지 (Hibernate 모방)
 1. 초기 단계 (Minimum Viable Product)
 
