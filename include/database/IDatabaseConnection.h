@@ -23,6 +23,12 @@ public:
 	virtual void beginTransaction() = 0;
 	virtual void commit() = 0;
 	virtual void rollback() = 0;
+
+	// Native handle 반환 (SQLite의 경우 sqlite3*)
+	virtual sqlite3* getNativeHandle() = 0;
+
+	// 쿼리에서 테이블 이름을 추출하는 함수
+    virtual std::string extractTableName(const std::string& query) = 0;
 };
 
 #endif // !IDATABASE_CONNECTION_H

@@ -23,9 +23,12 @@ public:
 	void commit() override;
 	void rollback() override;
 
+	sqlite3* getNativeHandle() override;
+	std::string extractTableName(const std::string& query) override;
+
 private:
 	sqlite3* db;
-	Databaseconfig config;
+	DatabaseConfig config;
 	Logger& logger;
 	bool isConnected;
 };
