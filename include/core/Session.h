@@ -8,6 +8,7 @@
 #include "Transaction.h"
 #include "query/Query.h"
 #include "query/QueryBuilder.h"
+#include "TransactionDefinition.h"
 
 class Session : public ISession {
 public:
@@ -19,7 +20,7 @@ public:
     void remove(std::shared_ptr<IEntity> entity) override;
     std::shared_ptr<IEntity> find(const std::string& entityName, int id) override;
     std::shared_ptr<IQuery> createQuery(const std::string& queryString) override;
-    std::shared_ptr<ITransaction> beginTransaction() override;
+    std::shared_ptr<ITransaction> beginTransaction(const TransactionDefinition& definition = TransactionDefinition()) override;
     std::shared_ptr<IQueryBuilder> createQueryBuilder();
     void close() override;
 

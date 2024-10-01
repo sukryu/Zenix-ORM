@@ -27,11 +27,16 @@ private:
     std::unordered_map<std::string, std::string> parameters;
     Logger& logger;
 
+    // Prepared Statement 캐시
+    static std::unordered_map<std::string, sqlite3_stmt*> statementCache;
+    static std::mutex cacheMutex;
+
     // SQLite3 전용: 준비된 문 (statement)
     sqlite3_stmt* stmt;
 
     // 쿼리를 준비하고 파라미터를 바인딩하는 함수
     void prepareAndBind();
+    void finalizeStatement();
 };
 
 #endif // QUERY_H

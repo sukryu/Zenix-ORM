@@ -26,28 +26,31 @@ void Session::save(std::shared_ptr<IEntity> entity) {
 
     logger.debug("Saving entity: " + entity->getEntityName());
 
-    // 엔티티 매핑 정보를 가져옴
+    // Get entity mapping information
     auto mappingInfo = EntityMapper::getInstance().getMapping(entity->getEntityName());
     if (!mappingInfo) {
         throw MappingException("No mapping information found for entity: " + entity->getEntityName());
     }
 
-    // INSERT 쿼리 생성
+    // Build INSERT query with placeholders
     std::string query = "INSERT INTO " + mappingInfo->tableName + " (";
-    std::string values = "VALUES (";
+    std::string valuesPart = "VALUES (";
+
+    std::vector<std::any> params;
 
     for (const auto& field : mappingInfo->fields) {
         query += field.columnName + ", ";
-        values += "'" + entity->getFieldValue(field.fieldName) + "', ";
+        valuesPart += "?, ";
+        params.push_back(entity->getFieldValue(field.fieldName));
     }
 
-    // 마지막 콤마와 공백 제거
+    // Remove the last comma and space
     query = query.substr(0, query.size() - 2) + ") ";
-    values = values.substr(0, values.size() - 2) + ");";
-    query += values;
+    valuesPart = valuesPart.substr(0, valuesPart.size() - 2) + ");";
+    query += valuesPart;
 
     try {
-        connection->executeUpdate(query);
+        connection->executeUpdate(query, params);
         logger.info("Entity saved successfully.");
     } catch (const QueryExecutionException& e) {
         logger.error(e.what());
@@ -67,21 +70,27 @@ void Session::update(std::shared_ptr<IEntity> entity) {
         throw MappingException("No mapping information found for entity: " + entity->getEntityName());
     }
 
-    // UPDATE 쿼리 생성
+    // Build the UPDATE query with placeholders
     std::string query = "UPDATE " + mappingInfo->tableName + " SET ";
 
+    std::vector<std::any> params;
+
     for (const auto& field : mappingInfo->fields) {
-        query += field.columnName + " = '" + entity->getFieldValue(field.fieldName) + "', ";
+        query += field.columnName + " = ?, ";
+        params.push_back(entity->getFieldValue(field.fieldName));
     }
 
-    // 마지막 콤마와 공백 제거
-    query = query.substr(0, query.size() - 2);
+    // Remove the last comma and space
+    if (!mappingInfo->fields.empty()) {
+        query = query.substr(0, query.size() - 2);
+    }
 
-    // WHERE 절 추가
-    query += " WHERE " + mappingInfo->idColumnName + " = '" + entity->getId() + "';";
+    // WHERE clause
+    query += " WHERE " + mappingInfo->idColumnName + " = ?;";
+    params.push_back(entity->getId()); // Ensure that getId() returns an appropriate type
 
     try {
-        connection->executeUpdate(query);
+        connection->executeUpdate(query, params);
         logger.info("Entity updated successfully.");
     } catch (const QueryExecutionException& e) {
         logger.error(e.what());
@@ -101,12 +110,14 @@ void Session::remove(std::shared_ptr<IEntity> entity) {
         throw MappingException("No mapping information found for entity: " + entity->getEntityName());
     }
 
-    // DELETE 쿼리 생성
-    std::string query = "DELETE FROM " + mappingInfo->tableName;
-    query += " WHERE " + mappingInfo->idColumnName + " = '" + entity->getId() + "';";
+    // Build DELETE query with placeholder
+    std::string query = "DELETE FROM " + mappingInfo->tableName + " WHERE " + mappingInfo->idColumnName + " = ?;";
+
+    std::vector<std::any> params;
+    params.push_back(entity->getId());
 
     try {
-        connection->executeUpdate(query);
+        connection->executeUpdate(query, params);
         logger.info("Entity removed successfully.");
     } catch (const QueryExecutionException& e) {
         logger.error(e.what());
@@ -172,19 +183,38 @@ std::shared_ptr<IQuery> Session::createQuery(const std::string& queryString) {
     return std::make_shared<Query>(connection, queryString);
 }
 
-std::shared_ptr<ITransaction> Session::beginTransaction() {
+std::shared_ptr<ITransaction> Session::beginTransaction(const TransactionDefinition& definition) {
     if (isTransactionActive) {
         throw TransactionException("Transaction is already active.");
     }
 
     try {
-        connection->beginTransaction();
+        // 트랜잭션 모드에 따른 BEGIN 문 생성
+        std::string beginTransactionSQL;
+        switch (definition.transactionMode) {
+            case TransactionMode::DEFERRED:
+                beginTransactionSQL = "BEGIN DEFERRED TRANSACTION";
+                break;
+            case TransactionMode::IMMEDIATE:
+                beginTransactionSQL = "BEGIN IMMEDIATE TRANSACTION";
+                break;
+            case TransactionMode::EXCLUSIVE:
+                beginTransactionSQL = "BEGIN EXCLUSIVE TRANSACTION";
+                break;
+            default:
+                beginTransactionSQL = "BEGIN TRANSACTION";
+                break;
+        }
+
+        // 트랜잭션 시작
+        connection->executeUpdate(beginTransactionSQL);
         isTransactionActive = true;
-        logger.info("Transaction started.");
+        logger.info("Transaction started with mode: " + beginTransactionSQL);
+
         return std::make_shared<Transaction>(connection, isTransactionActive);
-    } catch (const TransactionException& e) {
+    } catch (const QueryExecutionException& e) {
         logger.error(e.what());
-        throw;
+        throw TransactionException("Failed to begin transaction: " + std::string(e.what()));
     }
 }
 

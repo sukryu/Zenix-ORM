@@ -22,22 +22,31 @@ void Query::setParameter(const std::string& name, const std::string& value) {
 }
 
 void Query::prepareAndBind() {
+    std::lock_guard<std::mutex> lock(cacheMutex);
+
     if (stmt) {
-        sqlite3_finalize(stmt);
-        stmt = nullptr;
+        sqlite3_reset(stmt);
+    } else {
+        // 캐시에서 Prepared Statement 검색
+        auto it = statementCache.find(queryString);
+        if (it != statementCache.end()) {
+            stmt = it->second;
+            sqlite3_reset(stmt);
+        } else {
+            sqlite3* db = connection->getNativeHandle();
+            int rc = sqlite3_prepare_v2(db, queryString.c_str(), -1, &stmt, nullptr);
+            if (rc != SQLITE_OK) {
+                std::string errorMessage = sqlite3_errmsg(db);
+                logger.error("Failed to prepare statement: " + errorMessage);
+                throw QueryExecutionException(errorMessage);
+            }
+            statementCache[queryString] = stmt;
+        }
     }
 
-    sqlite3* db = connection->getNativeHandle(); // IDatabaseConnection에 getNativeHandle() 추가 필요
-    int rc = sqlite3_prepare_v2(db, queryString.c_str(), -1, &stmt, nullptr);
-    if (rc != SQLITE_OK) {
-        std::string errorMessage = sqlite3_errmsg(db);
-        logger.error("Failed to prepare statement: " + errorMessage);
-        throw QueryExecutionException(errorMessage);
-    }
-
-    // 파라미터 바인딩
+    // 모든 파라미터를 바인딩
     int paramCount = sqlite3_bind_parameter_count(stmt);
-    for (int i = 1; i <= paramCount; ++i) {
+    for (int i = 0; i < paramCount; i++) {
         const char* paramName = sqlite3_bind_parameter_name(stmt, i);
         if (paramName && paramName[0] == ':') {
             std::string name = paramName + 1; // ':' 제거
@@ -45,12 +54,19 @@ void Query::prepareAndBind() {
             if (it != parameters.end()) {
                 sqlite3_bind_text(stmt, i, it->second.c_str(), -1, SQLITE_TRANSIENT);
             } else {
-                throw QueryExecutionException("Parameter :" + name + " is not set.");
+                throw QueryExecutionException("Parameter :" + name + "is not set.");
             }
         } else {
-            throw QueryExecutionException("Unnamed parameters are not supported.");
+            throw QueryExecutionException("Unnamed parameters are not supported");
         }
     }
+}
+
+void Query::finalizeStatement() {
+    std::lock_guard<std::mutex> lock(cacheMutex);
+
+    // Prepared Statement를 캐시에서 제거하지 않고 유지하여 재사용
+    stmt = nullptr;
 }
 
 std::vector<std::shared_ptr<IEntity>> Query::list() {
@@ -60,7 +76,7 @@ std::vector<std::shared_ptr<IEntity>> Query::list() {
     std::vector<std::shared_ptr<IEntity>> entities;
 
     // 테이블 이름 추출 및 매핑 정보 가져오기
-    std::string tableName = connection->extractTableName(queryString); // 이 함수는 별도로 구현 필요
+    std::string tableName = connection->extractTableName(queryString);
     auto mappingInfo = EntityMapper::getInstance().getMappingByTableName(tableName);
     if (!mappingInfo) {
         throw MappingException("No mapping found for table: " + tableName);

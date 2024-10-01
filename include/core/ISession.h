@@ -9,6 +9,7 @@
 #include "database/IDatabaseConnection.h"
 #include "ITransaction.h"
 #include "query/IQuery.h"
+#include "TransactionDefinition.h"
 
 class ISession {
 public:
@@ -25,7 +26,7 @@ public:
     // 쿼리 생성
     virtual std::shared_ptr<IQuery> createQuery(const std::string& queryString) = 0;
     // 트랜잭션 관리
-    virtual std::shared_ptr<ITransaction> beginTransaction() = 0;
+    virtual std::shared_ptr<ITransaction> beginTransaction(const TransactionDefinition& definition = TransactionDefinition()) = 0;
     // 세션 닫기
     virtual void close() = 0;
 };

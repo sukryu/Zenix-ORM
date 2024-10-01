@@ -4,33 +4,42 @@
 #include "include/database/IDatabaseConnection.h"
 #include "../utils/DatabaseConfig.h"
 #include <sqlite3.h>
+#include <any>
 
 class SQLiteConnection : public IDatabaseConnection {
 public:
-	explicit SQLiteConnection(const DatabaseConfig& config);
-	virtual ~SQLiteConnection();
+    explicit SQLiteConnection(const DatabaseConfig& config);
+    virtual ~SQLiteConnection();
 
-	// 데이터베이스 연결 및 해제
-	void connect() override;
-	void disconnect() override;
+    // Database connection and disconnection
+    void connect() override;
+    void disconnect() override;
 
-	// 쿼리 실행
-	std::vector<std::map<std::string, std::string>> executeQuery(const std::string& query) override;
-	int executeUpdate(const std::string& query) override;
+    // Execute query with parameters
+    std::vector<std::map<std::string, std::string>> executeQuery(
+        const std::string& query,
+        const std::vector<std::any>& params = {}) override;
 
-	// 트랜잭션 관리
-	void beginTransaction() override;
-	void commit() override;
-	void rollback() override;
+    // Execute update with parameters
+    int executeUpdate(
+        const std::string& query,
+        const std::vector<std::any>& params = {}) override;
 
-	sqlite3* getNativeHandle() override;
-	std::string extractTableName(const std::string& query) override;
+    // Transaction management
+    void beginTransaction() override;
+    void commit() override;
+    void rollback() override;
+
+    // Get native handle
+    sqlite3* getNativeHandle() override;
+
+    std::string extractTableName(const std::string& query) override;
 
 private:
-	sqlite3* db;
-	DatabaseConfig config;
-	Logger& logger;
-	bool isConnected;
+    sqlite3* db;
+    DatabaseConfig config;
+    Logger& logger;
+    bool isConnected;
 };
 
 
