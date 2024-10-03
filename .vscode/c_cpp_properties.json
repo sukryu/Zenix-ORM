@@ -1,0 +1,18 @@
+{
+    "configurations": [
+      {
+        "name": "Linux",
+        "includePath": [
+          "${workspaceFolder}/**",
+          "~/.cache/node-gyp/20.17.0/include/node",
+          "${workspaceFolder}/node_modules/node-addon-api"
+        ],
+        "defines": [],
+        "compilerPath": "/usr/bin/gcc",
+        "cStandard": "c11",
+        "cppStandard": "c++17",
+        "intelliSenseMode": "linux-gcc-x64"
+      }
+    ],
+    "version": 4
+}

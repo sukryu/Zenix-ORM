@@ -1,17 +1,21 @@
 {
-  "name": "cpp-orm-addon",
+  "name": "Zenix ORM",
   "version": "1.0.0",
-  "description": "C++ ORM Addon for Node.js",
+  "description": "C++ Zenix ORM for Node.js",
   "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [ "orm", "cpp", "addon" ],
+  "keywords": [
+    "orm",
+    "cpp",
+    "addon"
+  ],
   "author": "Your Name",
   "license": "MIT",
-  "dependencies": {},
   "devDependencies": {
-    "node-addon-api": "^3.0.0"
+    "node-addon-api": "^3.2.1",
+    "node-gyp": "^10.2.0"
   }
 }

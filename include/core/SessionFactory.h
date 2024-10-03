@@ -1,29 +1,26 @@
 #ifndef SESSION_FACTORY_H
 #define SESSION_FACTORY_H
 
+#include "ConnectionPool.h"
+#include "DatabaseConfig.h"
 #include <memory>
-#include "database/DatabaseConfig.h"
-#include "core/ISession.h"
-#include "database/DatabaseConnectionFactory.h"
-#include "utils/logger/Logger.h"
 
 class SessionFactory {
 public:
     static SessionFactory& getInstance();
 
     void configure(const DatabaseConfig& config);
-    std::shared_ptr<ISession> openSession();
-    std::shared_ptr<ISession> getCurrentSession();
+    std::shared_ptr<IDatabaseConnection> getConnection();
+    void releaseConnection(std::shared_ptr<IDatabaseConnection> connection);
 
 private:
     SessionFactory();
+    ~SessionFactory();
+
     SessionFactory(const SessionFactory&) = delete;
     SessionFactory& operator=(const SessionFactory&) = delete;
-    thread_local static std::shared_ptr<ISession> currentSession;
 
-    DatabaseConfig config;
-    Logger& logger;
-    bool isConfigured;
+    std::unique_ptr<ConnectionPool> connectionPool;
 };
 
 #endif // SESSION_FACTORY_H

@@ -1,39 +1,26 @@
-#include "core/SessionFactory.h"
-#include "ORMException/ConfigurationException/ConfigurationException.h"
-#include "core/Session.h"
+#include "SessionFactory.h"
+
+SessionFactory::SessionFactory() {}
+
+SessionFactory::~SessionFactory() {}
 
 SessionFactory& SessionFactory::getInstance() {
     static SessionFactory instance;
     return instance;
 }
 
-SessionFactory::SessionFactory()
-    : logger(Logger::getInstance()), isConfigured(false) {
-    logger.debug("SessionFactory created.");
-}
-
 void SessionFactory::configure(const DatabaseConfig& config) {
-    this->config = config;
-    isConfigured = true;
-    logger.info("SessionFactory configured.");
+    // 초기 풀 크기와 최대 풀 크기를 설정합니다.
+    size_t initialPoolSize = 5;
+    size_t maxPoolSize = 20;
+
+    connectionPool = std::make_unique<ConnectionPool>(config, initialPoolSize, maxPoolSize);
 }
 
-std::shared_ptr<ISession> SessionFactory::openSession() {
-    if (!isConfigured) {
-        throw ConfigurationException("SessionFactory is not configured.");
-    }
-
-    auto connection = DatabaseConnectionFactory::createConnection(config);
-    connection->connect();
-    logger.debug("Opening new session.");
-    return std::make_shared<Session>(connection);
+std::shared_ptr<IDatabaseConnection> SessionFactory::getConnection() {
+    return connectionPool->acquireConnection();
 }
 
-thread_local std::shared_ptr<ISession> SessionFactory::currentSession = nullptr;
-
-std::shared_ptr<ISession> SessionFactory::getCurrentSession() {
-    if (!currentSession) {
-        currentSession = openSession();
-    }
-    return currentSession;
+void SessionFactory::releaseConnection(std::shared_ptr<IDatabaseConnection> connection) {
+    connectionPool->releaseConnection(connection);
 }

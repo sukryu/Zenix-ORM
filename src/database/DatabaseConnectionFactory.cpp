@@ -6,6 +6,6 @@ std::shared_ptr<IDatabaseConnection> DatabaseConnectionFactory::createConnection
     if (config.getDatabaseType() == DatabaseType::SQLite) {
         return std::make_shared<SQLiteConnection>(config);
     } else {
-        throw ConfigurationException("Unsupported database type.");
+        throw ConfigurationException("Unsupported database type: " + std::to_string(static_cast<int>(config.getDatabaseType())));
     }
 }

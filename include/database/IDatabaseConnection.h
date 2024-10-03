@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "../utils/logger/Logger.h"
-#include "../ORMException/ORMException.h"
+#include <any>
 
 class IDatabaseConnection {
 public:
@@ -31,9 +30,9 @@ public:
     virtual void rollback() = 0;
 
     // Get native handle
-    virtual sqlite3* getNativeHandle() = 0;
+    virtual void* getNativeHandle() = 0;
 
     virtual std::string extractTableName(const std::string& query) = 0;
 };
 
-#endif // !IDATABASE_CONNECTION_H
+#endif // IDATABASE_CONNECTION_H
