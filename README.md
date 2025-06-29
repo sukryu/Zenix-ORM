@@ -1,62 +1,84 @@
-📘 Zenix ORM
+📘 README.md – Zenix++ ORM
 
-NestJS 철학을 따르는 C++ 백엔드 프레임워크를 위한 고성능 ORM 모듈
-
-⸻
-
-📌 개요
-
-Zenix++ ORM은 C++20~26의 최신 기능을 기반으로 한 경량 ORM 라이브러리입니다.
-Java Hibernate에서 영감을 받은 Session/Transaction 기반 구조, 타입 안전한 DSL(QueryBuilder), 준비된 statement 캐싱, 1차/2차 캐시, 마이그레이션 지원 등 엔터프라이즈급 기능을 제공합니다.
-NestJS 스타일의 프레임워크에 자연스럽게 통합될 수 있도록 설계되었습니다.
+A high-performance, type-safe ORM for modern C++20~26. Inspired by Hibernate and designed for structured backend development with NestJS-like architecture.
 
 ⸻
 
-🎯 주요 목표
+📌 Table of Contents
+	1.	Introduction
+	2.	Features
+	3.	Architecture Overview
+	4.	Getting Started
+	5.	Usage
+	•	Entity Definition
+	•	Query Builder
+	•	Insert/Update/Delete
+	•	Transaction
+	6.	Integration
+	7.	Performance Considerations
+	8.	Future Plans
+	9.	License
 
-목표	설명
-💎 정확성	타입 안전한 쿼리 DSL + 컴파일 타임 검증
-⚡ 성능	Prepared Statement 재사용, Batch Insert, Zero-Copy Mapping
-🧱 안정성	세션/트랜잭션 단위 관리로 DB 무결성 확보
-🧠 생산성	선언형 엔티티 등록, DSL 기반 마이그레이션, 프레임워크 통합
-🧪 테스트 용이성	추상화된 DB 계층 및 모의 DB(Mocking) 지원
+⸻
+
+🧭 Introduction
+
+Zenix++ ORM is a modern, zero-overhead, and highly extensible ORM designed for C++20 and beyond.
+It brings the productivity of Java’s Hibernate to the C++ world without sacrificing compile-time safety, runtime performance, and modular design.
+
+This project is a part of the larger effort to build a NestJS-style backend framework in C++, optimized for real-world backend and microservice development.
+
+⸻
+
+✨ Features
+	•	🏷️ Declarative Entity Schema with macros or constexpr DSL
+	•	⚡ High-performance query builder with static analysis and prepared statements
+	•	🔒 RAII-based transaction management with nested savepoint support
+	•	🧠 Reflection-like entity metadata system without relying on RTTI
+	•	🔌 Pluggable backend drivers: PostgreSQL, SQLite, MySQL (planned)
+	•	📊 Built-in migration, caching, and performance logging
+	•	⚙️ Seamless integration with NestJS-style framework in C++
+
+⸻
+
+🏛️ Architecture Overview
+
+[ Entity Registry ]
+       ↓
+[ Metadata Layer ] -- (Entity<T> → Table, Column[])
+       ↓
+[ Query Builder ] -- (select<T>().where(...).order_by(...))
+       ↓
+[ Query Executor ]
+       ↓
+[ Row Mapper (row → T) ]
+       ↓
+[ Async I/O / Connection Pool ]
 
 
 ⸻
 
-🏗️ 아키텍처 구성도
+🚀 Getting Started
 
-┌──────────────────────────────────────┐
-│          Application Layer           │
-│ ┌────────────┐  ┌──────────────────┐ │
-│ │ Controller │→ │  Service (DI)    │ │
-│ └────────────┘  └────────┬─────────┘ │
-│                          ↓           │
-│                    ┌────────────┐    │
-│                    │ Repository │──┐ │
-│                    └─────┬──────┘  │ │
-└──────────────────────────┼─────────┘ │
-                           ↓            │
-             ┌──────────────────────────────┐
-             │          Zenix++ ORM         │
-             │ ┌────────────┐  ┌──────────┐ │
-             │ │ Query<T>   │  │ Session  │ │
-             │ │ Mapper<T>  │  │ TxScope  │ │
-             │ └────┬───────┘  └────┬─────┘ │
-             │      ↓               ↓       │
-             │  PreparedStmt      Connection│
-             └──────┬───────────────────────┘
-                    ↓
-              ┌────────────┐
-              │ PostgreSQL │ (libpq)
-              └────────────┘
+Prerequisites
+	•	Compiler supporting C++20 or newer (C++23/26 recommended)
+	•	CMake 3.20+
+	•	Supported DB Driver: PostgreSQL (libpq) or SQLite3
+
+Installation
+
+git clone https://github.com/yourname/zenixpp-orm.git
+cd zenixpp-orm
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
 
 
 ⸻
 
-📦 기본 사용법
+🧪 Usage
 
-1. 엔티티 정의 및 등록
+✅ Entity Definition
 
 struct User {
     int id;
@@ -67,100 +89,98 @@ struct User {
 REGISTER_ENTITY(User, "users",
     std::make_pair("id", &User::id),
     std::make_pair("name", &User::name),
-    std::make_pair("age", &User::age));
+    std::make_pair("age", &User::age)
+);
 
 
 ⸻
 
-2. SELECT 쿼리 (QueryBuilder DSL)
+🔍 Query Builder
 
-auto users = orm::select<User>()
+auto query = orm::select<User>()
     .where(field(&User::age) > 20 && field(&User::name) == "진혁")
     .order_by(&User::id)
-    .limit(10)
-    .exec();
+    .limit(10);
 
 
 ⸻
 
-3. INSERT
+✏️ Insert / Update / Delete
 
-User newUser{.id = 1, .name = "홍진혁", .age = 24};
-orm::insert(newUser);
+User user{.id = 1, .name = "진혁", .age = 24};
+orm::insert(user);
 
+user.age = 25;
+orm::update(user);
 
-⸻
-
-4. 트랜잭션
-
-orm::Session session;
-orm::Transaction tx(session);
-
-auto u = orm::select<User>().where(field(&User::id) == 1).exec_one();
-
-u.age += 1;
-orm::update(u);
-
-tx.commit(); // or tx.rollback();
+orm::remove(user);
 
 
 ⸻
 
-🔧 핵심 기능
+🔐 Transaction
 
-기능	설명
-🧩 Query DSL	select<T>().where(...) 기반의 타입 안전 SQL 작성
-🧠 Entity Registry	런타임 메타데이터 기반, 템플릿 과다 사용 방지
-📋 Prepared Statement	자동 캐싱 및 재사용
-🔄 Migration DSL	create_table<T>(), alter_table<T>() 형태
-🗃️ 1차/2차 캐시	세션별 객체 캐싱, 전역 캐시 (선택)
-🔗 프레임워크 통합	@InjectRepository(User)처럼 DI 주입 가능
-🧪 MockDB 지원	테스트 환경에서 실제 DB 없이 검증 가능
+orm::DbSession session;
 
-
-⸻
-
-🛠️ 기술 스택
-
-항목	선택 기술
-언어	C++20 ~ C++26
-메타정보	std::type_index, std::function, [[attributes]], 매크로 기반
-쿼리 빌더	Expression Template + Operator Overloading
-DB 연동	PostgreSQL (libpq) 기반 (MySQL, SQLite는 추후 추가)
-비동기	Unifex + ASIO 기반 coroutine 지원 예정
-테스트	Catch2, MockDB, Docker 기반 통합 테스트 지원 예정
+try {
+    orm::Transaction tx(session);
+    orm::insert(user);
+    orm::insert(other_user);
+    tx.commit();  // Automatically rolls back if not committed
+} catch (const std::exception& e) {
+    // rollback triggered automatically
+}
 
 
 ⸻
 
-🚀 Roadmap
+🧩 Integration
 
-단계	내용
-✅ v0.1	Entity 등록 + select/insert DSL + 기본 mapper
-🔄 v0.2	Migration DSL + 트랜잭션 + update/delete
-🔜 v0.3	Async/Coroutine 지원 + 캐싱 레이어 추가
-🔜 v1.0	NestJS 스타일 프레임워크와 완전 통합 (DI, Module 등)
+Zenix++ ORM is designed to integrate cleanly with NestJS-style modular frameworks in C++.
+You can inject repository classes via custom DI containers and reuse entity logic across modules.
+
+class UserRepository {
+public:
+    std::vector<User> find_adults() {
+        return orm::select<User>().where(field(&User::age) >= 18).execute();
+    }
+};
+
+
+⸻
+
+🛠️ Performance Considerations
+
+최적화 항목	적용 방식
+Prepared Statement	Query pre-compilation + binding
+Zero-copy Row Mapping	Struct layout-aware optimization
+Async I/O	Coroutine 기반 Unifex + libpq
+Connection Pool	Future work (planned module)
+Compile-time control	Type-indexed metadata cache, macro DSL
 
 
 ⸻
 
-📄 예제 프로젝트
-
-예제 프로젝트는 /examples/basic_orm_app/ 디렉토리에 위치
-CMake, Docker, .env로 PostgreSQL 연동 가능
-
-⸻
-
-📚 문서
-	•	Docs: Entity 등록 방식
-	•	Docs: Query Builder DSL
-	•	Docs: 트랜잭션 처리
-	•	Docs: 마이그레이션 시스템
+🧭 Future Plans
+	•	Support for JOINs, subqueries, unions
+	•	Codegen-based constexpr entity definition DSL
+	•	Migration CLI: zenix migrate up/down
+	•	Auto schema diffing / version control
+	•	Pluggable DB backend (MySQL, Redis view layer)
+	•	C++26 std::meta integration (optional)
 
 ⸻
 
-⏱️ 시작일
+📄 License
 
-이 프로젝트는 2026년 09월 09일부터 본격적으로 시작됩니다.
+MIT License.
+Feel free to fork, customize, and contribute.
+
+⸻
+
+🗓️ Project Schedule
+
+The Zenix++ ORM project officially kicks off on 2026년 09월 09일.
+Stay tuned for alpha releases and module documentation.
 
 ⸻
